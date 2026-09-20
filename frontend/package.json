@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "test": "vitest run"
+    "test": "vitest run lib",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "next": "16.3.5",
@@ -15,6 +16,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
@@ -24,7 +26,6 @@
     "jsdom": "^26.0.0",
     "tailwindcss": "4.3.3",
     "typescript": "^5.8.0",
-    "vitest": "^3.0.0"
+    "vitest": "^5.0.1"
   }
 }
-

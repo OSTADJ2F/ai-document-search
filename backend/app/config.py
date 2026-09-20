@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     storage_backend: str = "local"
     local_storage_path: Path = Path("data/uploads")
+    s3_bucket: str | None = None
+    s3_endpoint_url: str | None = None
+    s3_region: str = "us-east-1"
+    s3_access_key_id: str | None = None
+    s3_secret_access_key: str | None = None
     max_upload_size_mb: int = Field(default=20, ge=1, le=100)
     embedding_provider: str = "local"
     generation_provider: str = "extractive"
@@ -30,6 +35,13 @@ class Settings(BaseSettings):
     def parse_cors_origins(cls, value: object) -> object:
         if isinstance(value, str) and not value.startswith("["):
             return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    @field_validator("database_url")
+    @classmethod
+    def select_psycopg_driver(cls, value: str) -> str:
+        if value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+psycopg://", 1)
         return value
 
     @property

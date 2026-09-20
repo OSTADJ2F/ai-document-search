@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 from redis import Redis
 from sqlalchemy import text
@@ -24,6 +24,18 @@ class HealthResponse(BaseModel):
 
 @router.get("/health", response_model=HealthResponse)
 def health_check() -> HealthResponse:
+    return dependency_health()
+
+
+@router.get("/ready", response_model=HealthResponse)
+def readiness_check(response: Response) -> HealthResponse:
+    health = dependency_health()
+    if health.status == "degraded":
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return health
+
+
+def dependency_health() -> HealthResponse:
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))

@@ -47,9 +47,50 @@ class LocalStorage(StorageProvider):
         return target.read_bytes()
 
 
+class S3Storage(StorageProvider):
+    def __init__(
+        self,
+        bucket: str,
+        endpoint_url: str | None,
+        region: str,
+        access_key_id: str | None,
+        secret_access_key: str | None,
+    ):
+        import boto3
+
+        self.bucket = bucket
+        self.client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            region_name=region,
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
+        )
+
+    def save(self, user_id: uuid.UUID, document_id: uuid.UUID, suffix: str, data: bytes) -> str:
+        key = f"{user_id}/{document_id}{suffix}"
+        self.client.put_object(Bucket=self.bucket, Key=key, Body=data)
+        return key
+
+    def delete(self, storage_path: str) -> None:
+        self.client.delete_object(Bucket=self.bucket, Key=storage_path)
+
+    def read(self, storage_path: str) -> bytes:
+        response = self.client.get_object(Bucket=self.bucket, Key=storage_path)
+        return response["Body"].read()
+
+
 @lru_cache
 def get_storage() -> StorageProvider:
     settings = get_settings()
-    if settings.storage_backend != "local":
-        raise RuntimeError(f"Unsupported storage backend: {settings.storage_backend}")
-    return LocalStorage(settings.local_storage_path)
+    if settings.storage_backend == "local":
+        return LocalStorage(settings.local_storage_path)
+    if settings.storage_backend == "s3" and settings.s3_bucket:
+        return S3Storage(
+            settings.s3_bucket,
+            settings.s3_endpoint_url,
+            settings.s3_region,
+            settings.s3_access_key_id,
+            settings.s3_secret_access_key,
+        )
+    raise RuntimeError(f"Invalid or unsupported storage backend: {settings.storage_backend}")

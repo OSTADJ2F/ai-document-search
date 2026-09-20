@@ -46,7 +46,11 @@ export function Workspace() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
+    const interval = window.setInterval(() => void load(), 5_000);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+    };
   }, [load]);
 
   async function upload(event: ChangeEvent<HTMLInputElement>) {
