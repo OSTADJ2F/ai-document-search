@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
 import { formatFileSize } from "@/lib/format";
+import { AskPanel } from "@/components/ask-panel";
 
 type Document = {
   id: string;
@@ -112,6 +113,7 @@ export function Workspace() {
             ))
           )}
         </div>
+        <AskPanel />
       </section>
     </main>
   );

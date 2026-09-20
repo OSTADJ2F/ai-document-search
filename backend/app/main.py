@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.database import models  # noqa: F401
 from app.database.session import Base, engine
 from app.documents.routes import router as documents_router
+from app.generation.routes import router as generation_router
 from app.retrieval.routes import router as retrieval_router
 
 settings = get_settings()
@@ -68,3 +69,4 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(documents_router)
 app.include_router(retrieval_router)
+app.include_router(generation_router)
