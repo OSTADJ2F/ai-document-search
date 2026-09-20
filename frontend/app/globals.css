@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #17211b;
+  --paper: #f5f3ea;
+  --accent: #e8613a;
+  --forest: #173f35;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 15% 5%, rgba(232, 97, 58, 0.11), transparent 35rem),
+    var(--paper);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
