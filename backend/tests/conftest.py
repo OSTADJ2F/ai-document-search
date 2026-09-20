@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.database.models import User  # noqa: F401
 from app.database.session import Base, get_db
+from app.documents.storage import LocalStorage, get_storage
 from app.main import app
 
 
@@ -23,11 +24,12 @@ def db(tmp_path) -> Generator[Session, None, None]:  # type: ignore[no-untyped-d
 
 
 @pytest.fixture
-def client(db: Session) -> Generator[TestClient, None, None]:
+def client(db: Session, tmp_path) -> Generator[TestClient, None, None]:  # type: ignore[no-untyped-def]
     def override_db() -> Generator[Session, None, None]:
         yield db
 
     app.dependency_overrides[get_db] = override_db
+    app.dependency_overrides[get_storage] = lambda: LocalStorage(tmp_path / "uploads")
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

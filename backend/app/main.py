@@ -12,6 +12,7 @@ from app.auth.routes import router as auth_router
 from app.config import get_settings
 from app.database import models  # noqa: F401
 from app.database.session import Base, engine
+from app.documents.routes import router as documents_router
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
@@ -60,3 +61,4 @@ async def request_context(request: Request, call_next):  # type: ignore[no-untyp
 
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(documents_router)
