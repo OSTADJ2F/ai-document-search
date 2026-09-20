@@ -32,6 +32,22 @@ services:
       backend:
         condition: service_healthy
 
+  worker:
+    build: ./backend
+    command: ["rq", "worker", "ingestion", "--url", "redis://redis:6379/0"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/document_search
+      REDIS_URL: redis://redis:6379/0
+      LOCAL_STORAGE_PATH: /app/data/uploads
+    volumes:
+      - uploads:/app/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   postgres:
     image: pgvector/pgvector:pg16
     environment:

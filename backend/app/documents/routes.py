@@ -13,6 +13,7 @@ from app.database.session import get_db
 from app.documents.schemas import DeleteResponse, DocumentListResponse, DocumentResponse
 from app.documents.storage import StorageProvider, get_storage
 from app.documents.validation import InvalidDocument, validate_document
+from app.ingestion.tasks import enqueue_document
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 Database = Annotated[Session, Depends(get_db)]
@@ -90,6 +91,7 @@ async def upload_document(
         storage.delete(storage_path)
         raise
     db.refresh(document)
+    enqueue_document(document.id)
     return document
 
 

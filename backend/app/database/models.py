@@ -2,6 +2,7 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, BigInteger, DateTime, Enum, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -75,7 +76,7 @@ class DocumentChunk(Base):
     page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     section: Mapped[str | None] = mapped_column(String(500), nullable=True)
     token_count: Mapped[int] = mapped_column(Integer)
-    embedding: Mapped[list[float]] = mapped_column(JSON)
+    embedding: Mapped[list[float]] = mapped_column(JSON().with_variant(Vector(384), "postgresql"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     document: Mapped[Document] = relationship(back_populates="chunks")

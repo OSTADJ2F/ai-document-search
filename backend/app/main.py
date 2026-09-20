@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.health import router as health_router
 from app.auth.routes import router as auth_router
@@ -23,6 +24,9 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if settings.app_env != "production":
+        if engine.dialect.name == "postgresql":
+            with engine.begin() as connection:
+                connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         Base.metadata.create_all(engine)
     yield
 
