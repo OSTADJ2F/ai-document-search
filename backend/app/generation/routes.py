@@ -10,8 +10,9 @@ from app.generation.providers import GenerationProvider, get_generation_provider
 from app.generation.schemas import AskRequest, AskResponse, Citation
 from app.retrieval.embeddings import EmbeddingProvider, get_embedding_provider
 from app.retrieval.search import hybrid_search
+from app.security.rate_limit import enforce_rate_limit
 
-router = APIRouter(tags=["question answering"])
+router = APIRouter(tags=["question answering"], dependencies=[Depends(enforce_rate_limit)])
 Database = Annotated[Session, Depends(get_db)]
 Embeddings = Annotated[EmbeddingProvider, Depends(get_embedding_provider)]
 Generator = Annotated[GenerationProvider, Depends(get_generation_provider)]

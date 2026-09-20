@@ -1,4 +1,6 @@
-from pathlib import Path
+import re
+from pathlib import PurePosixPath
+from urllib.parse import unquote
 
 SUPPORTED_EXTENSIONS = {".pdf": "pdf", ".txt": "txt", ".md": "markdown", ".markdown": "markdown"}
 
@@ -8,10 +10,11 @@ class InvalidDocument(ValueError):
 
 
 def validate_document(filename: str, data: bytes) -> tuple[str, str]:
-    safe_name = Path(filename).name.strip()
+    normalized = unquote(filename).replace("\\", "/")
+    safe_name = re.sub(r"[\x00-\x1f\x7f]", "", PurePosixPath(normalized).name).strip()
     if not safe_name or safe_name in {".", ".."}:
         raise InvalidDocument("A valid filename is required")
-    suffix = Path(safe_name).suffix.lower()
+    suffix = PurePosixPath(safe_name).suffix.lower()
     file_type = SUPPORTED_EXTENSIONS.get(suffix)
     if file_type is None:
         raise InvalidDocument("Supported file types are PDF, TXT, and Markdown")

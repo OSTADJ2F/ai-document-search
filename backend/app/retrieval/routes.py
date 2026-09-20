@@ -8,8 +8,9 @@ from app.database.session import get_db
 from app.retrieval.embeddings import EmbeddingProvider, get_embedding_provider
 from app.retrieval.schemas import SearchRequest, SearchResponse
 from app.retrieval.search import hybrid_search
+from app.security.rate_limit import enforce_rate_limit
 
-router = APIRouter(tags=["retrieval"])
+router = APIRouter(tags=["retrieval"], dependencies=[Depends(enforce_rate_limit)])
 Database = Annotated[Session, Depends(get_db)]
 Embeddings = Annotated[EmbeddingProvider, Depends(get_embedding_provider)]
 

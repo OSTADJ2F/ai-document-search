@@ -14,8 +14,11 @@ from app.documents.schemas import DeleteResponse, DocumentListResponse, Document
 from app.documents.storage import StorageProvider, get_storage
 from app.documents.validation import InvalidDocument, validate_document
 from app.ingestion.tasks import enqueue_document
+from app.security.rate_limit import enforce_rate_limit
 
-router = APIRouter(prefix="/documents", tags=["documents"])
+router = APIRouter(
+    prefix="/documents", tags=["documents"], dependencies=[Depends(enforce_rate_limit)]
+)
 Database = Annotated[Session, Depends(get_db)]
 Storage = Annotated[StorageProvider, Depends(get_storage)]
 

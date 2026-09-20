@@ -24,12 +24,13 @@ def db(tmp_path) -> Generator[Session, None, None]:  # type: ignore[no-untyped-d
 
 
 @pytest.fixture
-def client(db: Session, tmp_path) -> Generator[TestClient, None, None]:  # type: ignore[no-untyped-def]
+def client(db: Session, tmp_path, monkeypatch) -> Generator[TestClient, None, None]:  # type: ignore[no-untyped-def]
     def override_db() -> Generator[Session, None, None]:
         yield db
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_storage] = lambda: LocalStorage(tmp_path / "uploads")
+    monkeypatch.setattr("app.documents.routes.enqueue_document", lambda _: True)
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

@@ -47,6 +47,31 @@ def test_upload_validation_and_duplicates(client: TestClient, auth_headers: dict
     assert client.post("/documents", headers=auth_headers, files=files).status_code == 201
     assert client.post("/documents", headers=auth_headers, files=files).status_code == 409
 
+    sanitized = client.post(
+        "/documents",
+        headers=auth_headers,
+        files={"file": ("../../unsafe\x00name.txt", b"different content", "text/plain")},
+    )
+    assert sanitized.status_code == 201
+    assert sanitized.json()["filename"] == "unsafename.txt"
+
+
+def test_oversized_upload_is_rejected(
+    client: TestClient, auth_headers: dict[str, str], monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    from app.config import Settings
+
+    monkeypatch.setattr(
+        "app.documents.routes.get_settings",
+        lambda: Settings(max_upload_size_mb=1),
+    )
+    response = client.post(
+        "/documents",
+        headers=auth_headers,
+        files={"file": ("large.txt", b"x" * (1024 * 1024 + 1), "text/plain")},
+    )
+    assert response.status_code == 413
+
 
 def test_documents_are_isolated_between_users(
     client: TestClient, auth_headers: dict[str, str]

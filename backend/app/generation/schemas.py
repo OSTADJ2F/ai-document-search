@@ -1,12 +1,20 @@
 import uuid
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=2, max_length=2000)
     document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
     retrieval_limit: int = Field(default=8, ge=1, le=20)
+
+    @field_validator("question")
+    @classmethod
+    def question_must_contain_text(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("Question must contain at least two non-whitespace characters")
+        return value
 
 
 class Citation(BaseModel):

@@ -15,8 +15,11 @@ from app.auth.schemas import (
 from app.auth.security import create_access_token, hash_password, verify_password
 from app.database.models import AuditLog, User
 from app.database.session import get_db
+from app.security.rate_limit import enforce_rate_limit
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(
+    prefix="/auth", tags=["authentication"], dependencies=[Depends(enforce_rate_limit)]
+)
 Database = Annotated[Session, Depends(get_db)]
 
 

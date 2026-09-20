@@ -2,7 +2,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.database.models import User
-from app.generation.providers import build_grounded_prompt
+from app.generation.providers import (
+    GenerationProvider,
+    build_grounded_prompt,
+    get_generation_provider,
+)
 from app.retrieval.schemas import SearchResult
 from tests.test_retrieval import add_ready_document
 
@@ -60,3 +64,20 @@ def test_document_instructions_are_delimited_as_untrusted() -> None:
     prompt = build_grounded_prompt("Summarize the policy", [source])
     assert "untrusted reference data" in prompt
     assert '<source id="0">' in prompt
+
+
+class FailingProvider(GenerationProvider):
+    def generate(self, question, sources):  # type: ignore[no-untyped-def]
+        raise TimeoutError("provider timeout")
+
+
+def test_provider_failure_returns_safe_error(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    from app.main import app
+
+    app.dependency_overrides[get_generation_provider] = lambda: FailingProvider()
+    response = client.post("/ask", headers=auth_headers, json={"question": "What is the risk?"})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "The answer provider is temporarily unavailable"
+    app.dependency_overrides.pop(get_generation_provider, None)

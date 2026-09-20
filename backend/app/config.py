@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     generation_provider: str = "extractive"
     openai_api_key: str | None = None
     process_documents_inline: bool = False
+    rate_limit_per_minute: int = Field(default=60, ge=10, le=1000)
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -33,6 +34,16 @@ class Settings(BaseSettings):
     @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_size_mb * 1024 * 1024
+
+    @model_validator(mode="after")
+    def validate_production_secret(self) -> "Settings":
+        if self.app_env == "production" and (
+            len(self.secret_key) < 32 or self.secret_key == "development-only-change-me"
+        ):
+            raise ValueError(
+                "Production SECRET_KEY must be a unique value of at least 32 characters"
+            )
+        return self
 
 
 @lru_cache
