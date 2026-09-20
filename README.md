@@ -38,8 +38,8 @@ flowchart LR
 ```
 
 The provider boundaries keep embeddings, generation, and object storage
-replaceable through configuration. See [architecture](docs/architecture.md) and
-[API reference](docs/api.md).
+replaceable through configuration. See [architecture](docs/architecture.md),
+[API reference](docs/api.md), and the [portfolio case study](docs/portfolio.md).
 
 ## Quick start with Docker
 
