@@ -12,6 +12,7 @@ from app.database.session import SessionLocal
 from app.documents.storage import StorageProvider, get_storage
 from app.ingestion.chunking import chunk_pages
 from app.ingestion.extraction import extract_document
+from app.observability import INGESTION_JOBS
 from app.retrieval.embeddings import EmbeddingProvider, get_embedding_provider
 
 logger = structlog.get_logger()
@@ -71,6 +72,7 @@ def ingest_document(
         )
         document.status = DocumentStatus.ready
         db.commit()
+        INGESTION_JOBS.labels("success").inc()
         logger.info("ingestion.complete", document_id=str(document.id), chunks=len(chunks))
     except Exception as exc:
         db.rollback()
@@ -79,6 +81,7 @@ def ingest_document(
             document.status = DocumentStatus.failed
             document.error_message = f"Processing failed: {type(exc).__name__}"
             db.commit()
+        INGESTION_JOBS.labels("failed").inc()
         logger.exception("ingestion.failed", document_id=str(document.id))
         raise
 

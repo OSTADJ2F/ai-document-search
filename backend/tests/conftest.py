@@ -9,6 +9,7 @@ from app.database.models import User  # noqa: F401
 from app.database.session import Base, get_db
 from app.documents.storage import LocalStorage, get_storage
 from app.main import app
+from app.retrieval.cache import NullSearchCache, get_search_cache
 
 
 @pytest.fixture
@@ -30,6 +31,7 @@ def client(db: Session, tmp_path, monkeypatch) -> Generator[TestClient, None, No
 
     app.dependency_overrides[get_db] = override_db
     app.dependency_overrides[get_storage] = lambda: LocalStorage(tmp_path / "uploads")
+    app.dependency_overrides[get_search_cache] = lambda: NullSearchCache()
     monkeypatch.setattr("app.documents.routes.enqueue_document", lambda _: True)
     with TestClient(app) as test_client:
         yield test_client

@@ -1,3 +1,4 @@
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +9,7 @@ from app.database.models import AuditLog
 from app.database.session import get_db
 from app.generation.providers import GenerationProvider, get_generation_provider
 from app.generation.schemas import AskRequest, AskResponse, Citation
+from app.observability import GENERATION_LATENCY
 from app.retrieval.embeddings import EmbeddingProvider, get_embedding_provider
 from app.retrieval.search import hybrid_search
 from app.security.rate_limit import enforce_rate_limit
@@ -36,12 +38,15 @@ def ask_documents(
         uploaded_after=None,
         limit=payload.retrieval_limit,
     )
+    started = time.perf_counter()
     try:
         generated = generator.generate(payload.question, results)
     except Exception as exc:
         raise HTTPException(
             status_code=503, detail="The answer provider is temporarily unavailable"
         ) from exc
+    finally:
+        GENERATION_LATENCY.observe(time.perf_counter() - started)
     citations = [
         Citation(
             document_id=results[index].document_id,
