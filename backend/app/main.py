@@ -1,23 +1,36 @@
 import logging
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.auth.routes import router as auth_router
 from app.config import get_settings
+from app.database import models  # noqa: F401
+from app.database.session import Base, engine
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level)
 structlog.configure(processors=[structlog.processors.JSONRenderer()])
 logger = structlog.get_logger()
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if settings.app_env != "production":
+        Base.metadata.create_all(engine)
+    yield
+
+
 app = FastAPI(
     title="AI Document Search API",
     version="0.1.0",
     description="Private document ingestion, hybrid retrieval, and grounded answers.",
+    lifespan=lifespan,
 )
 app.add_middleware(
     CORSMiddleware,
@@ -46,3 +59,4 @@ async def request_context(request: Request, call_next):  # type: ignore[no-untyp
 
 
 app.include_router(health_router)
+app.include_router(auth_router)
