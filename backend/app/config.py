@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     embedding_provider: str = "local"
     generation_provider: str = "extractive"
     openai_api_key: str | None = None
+    llama_cpp_base_url: str = "http://localhost:8080"
+    llama_cpp_model: str = "qwen-local"
+    llama_cpp_timeout_seconds: float = Field(default=120, gt=0, le=600)
+    groq_api_key: str | None = None
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "openai/gpt-oss-20b"
+    groq_timeout_seconds: float = Field(default=120, gt=0, le=600)
     process_documents_inline: bool = False
     rate_limit_per_minute: int = Field(default=60, ge=10, le=1000)
     search_cache_ttl_seconds: int = Field(default=60, ge=0, le=3600)

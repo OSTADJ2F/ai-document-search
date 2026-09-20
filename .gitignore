@@ -28,10 +28,10 @@ data/
 uploads/
 *.db
 *.sqlite3
+llama-server.*.log
 
 # Editors and operating systems
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
-

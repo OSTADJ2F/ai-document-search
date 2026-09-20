@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from app.auth.dependencies import CurrentUser
 from app.database.models import AuditLog
 from app.database.session import get_db
-from app.generation.providers import GenerationProvider, get_generation_provider
+from app.generation.providers import (
+    GenerationProvider,
+    GenerationProviderNotConfiguredError,
+    get_generation_provider,
+    get_groq_generation_provider,
+)
 from app.generation.schemas import AskRequest, AskResponse, Citation
 from app.observability import GENERATION_LATENCY
 from app.retrieval.embeddings import EmbeddingProvider, get_embedding_provider
@@ -18,6 +23,7 @@ router = APIRouter(tags=["question answering"], dependencies=[Depends(enforce_ra
 Database = Annotated[Session, Depends(get_db)]
 Embeddings = Annotated[EmbeddingProvider, Depends(get_embedding_provider)]
 Generator = Annotated[GenerationProvider, Depends(get_generation_provider)]
+GroqGenerator = Annotated[GenerationProvider, Depends(get_groq_generation_provider)]
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -26,7 +32,8 @@ def ask_documents(
     current_user: CurrentUser,
     db: Database,
     embeddings: Embeddings,
-    generator: Generator,
+    local_generator: Generator,
+    groq_generator: GroqGenerator,
 ) -> AskResponse:
     results = hybrid_search(
         db=db,
@@ -38,9 +45,12 @@ def ask_documents(
         uploaded_after=None,
         limit=payload.retrieval_limit,
     )
+    generator = local_generator if payload.provider == "local" else groq_generator
     started = time.perf_counter()
     try:
         generated = generator.generate(payload.question, results)
+    except GenerationProviderNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=503, detail="The answer provider is temporarily unavailable"
@@ -70,6 +80,7 @@ def ask_documents(
                 "retrieved_chunks": len(results),
                 "citations": len(citations),
                 "supported": generated.supported,
+                "provider": payload.provider,
             },
         )
     )

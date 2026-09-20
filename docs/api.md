@@ -31,6 +31,20 @@ Search body:
 }
 ```
 
+Ask body:
+
+```json
+{
+  "question": "What were the main risks?",
+  "document_ids": [],
+  "retrieval_limit": 8,
+  "provider": "local"
+}
+```
+
+`provider` accepts `local` or `groq` and defaults to `local`. Groq requires a
+server-side `GROQ_API_KEY`; the credential is never accepted from the client.
+
 Ask response:
 
 ```json

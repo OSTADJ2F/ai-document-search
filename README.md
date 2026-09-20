@@ -16,8 +16,8 @@ retrieval, and ask questions whose answers link back to exact source passages.
   and batched, replaceable embeddings
 - PostgreSQL full-text search plus pgvector cosine similarity, combined with a
   70/30 hybrid score and owner/date/type/document filters
-- Grounded question answering with inspectable citations and an honest
-  unsupported-answer response
+- A workspace provider setting for local llama.cpp or Groq, with inspectable
+  citations, structured output validation, and an honest unsupported response
 - Prompt-injection boundaries, distributed rate limiting, audit logs, structured
   request logs, Prometheus metrics, and owner-scoped search caching
 - Pytest quality evaluation, Vitest unit tests, Playwright smoke tests, GitHub
@@ -43,7 +43,14 @@ replaceable through configuration. See [architecture](docs/architecture.md),
 
 ## Quick start with Docker
 
-Prerequisites: Docker Desktop with Compose v2.
+Prerequisites: Docker Desktop with Compose v2, plus a llama.cpp server with a
+chat model loaded. For example:
+
+```bash
+llama-server --model /path/to/model.gguf --alias qwen-local --host 127.0.0.1 --port 8080 --ctx-size 8192 --reasoning off
+```
+
+Set `GENERATION_PROVIDER=extractive` to use the simpler no-model fallback.
 
 ```bash
 cp .env.example .env
@@ -100,7 +107,11 @@ values include:
 | `STORAGE_BACKEND` | `local` or `s3` | `local` |
 | `MAX_UPLOAD_SIZE_MB` | Upload limit | `20` |
 | `EMBEDDING_PROVIDER` | Embedding adapter | `local` |
-| `GENERATION_PROVIDER` | Grounded answer adapter | `extractive` |
+| `GENERATION_PROVIDER` | Grounded answer adapter (`llama_cpp` or `extractive`) | `llama_cpp` |
+| `LLAMA_CPP_BASE_URL` | llama.cpp API URL (Compose reaches the host through `host.docker.internal`) | `http://host.docker.internal:8080` |
+| `LLAMA_CPP_MODEL` | Model alias exposed by `llama-server` | `qwen-local` |
+| `GROQ_API_KEY` | Server-side Groq credential; required only when Groq is selected | Unset |
+| `GROQ_MODEL` | Groq model used for grounded answers | `openai/gpt-oss-20b` |
 | `RATE_LIMIT_PER_MINUTE` | Per-client, per-route limit | `60` |
 | `SEARCH_CACHE_TTL_SECONDS` | Owner-scoped Redis cache TTL | `60` |
 
@@ -117,8 +128,12 @@ curl -X POST http://localhost:8000/auth/register \
 curl -X POST http://localhost:8000/ask \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"question":"What is the primary operational risk?"}'
+  -d '{"question":"What is the primary operational risk?","provider":"local"}'
 ```
+
+The `provider` field accepts only `local` or `groq`. Selecting Groq sends the
+retrieved source passages needed for the answer to Groq; the API key remains in
+the backend environment and is never returned to the browser.
 
 Run `python backend/scripts/seed_demo.py` against a running stack to register a
 demo account and upload the included risk report.
@@ -155,8 +170,8 @@ object-storage credentials.
 
 ## Known limitations
 
-- The included local embedding and extractive answer providers optimize for a
-  private, API-key-free demo rather than state-of-the-art language quality.
+- The included local hash embeddings optimize for a private, API-key-free demo;
+  retrieval quality is lower than a modern neural embedding model.
 - Scanned PDFs require an OCR adapter; the initial extractor handles text PDFs.
 - DOCX support is intentionally deferred until the core PDF/TXT/Markdown path.
 - Cache invalidation is TTL-based, so newly ingested content can take up to the

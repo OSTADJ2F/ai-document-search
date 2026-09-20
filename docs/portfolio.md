@@ -41,10 +41,9 @@ The primary demo flow is:
 - Deployment: Compose and Render YAML parse successfully; Alembic reports a
   single `0001_initial` head
 
-Docker Desktop is installed per-user on the development host and its engine and
-Compose plugin were verified through the installation's absolute CLI path. That
-CLI directory was not present in the Codex PowerShell session's `PATH`, which
-caused the initial command lookup to report a false negative.
+The current development host did not have Docker installed, so container startup
+was not executed locally. The repository includes reproducible Compose and Render
+instructions for verification on a Docker/cloud host.
 
 ## Milestone ledger
 
@@ -70,3 +69,4 @@ caused the initial command lookup to report a false negative.
 > hybrid semantic search, grounded question answering, citation tracking,
 > retryable workers, per-user authorization, and automated retrieval-quality
 > evaluation.
+
