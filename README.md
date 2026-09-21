@@ -128,12 +128,14 @@ curl -X POST http://localhost:8000/auth/register \
 curl -X POST http://localhost:8000/ask \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"question":"What is the primary operational risk?","provider":"local"}'
+  -d '{"question":"What is the primary operational risk?","provider":"local","local_server_port":8080}'
 ```
 
 The `provider` field accepts only `local` or `groq`. Selecting Groq sends the
 retrieved source passages needed for the answer to Groq; the API key remains in
-the backend environment and is never returned to the browser.
+the backend environment and is never returned to the browser. When local is
+selected, `local_server_port` can override the port from `LLAMA_CPP_URL`; the
+configured host and protocol remain fixed.
 
 Run `python backend/scripts/seed_demo.py` against a running stack to register a
 demo account and upload the included risk report.

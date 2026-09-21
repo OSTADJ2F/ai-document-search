@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database.models import User
 from app.generation.providers import (
+    ExtractiveGenerationProvider,
     GeneratedAnswer,
     GenerationProvider,
     GroqGenerationProvider,
@@ -91,19 +92,23 @@ def test_llama_cpp_provider_returns_grounded_answer(monkeypatch) -> None:  # typ
         assert url == "http://llama:8080/v1/chat/completions"
         assert timeout == 30
         assert headers is None
-        assert json["response_format"]["type"] == "json_schema"
+        assert "response_format" not in json
         return httpx.Response(
             200,
             json={
                 "choices": [
                     {
                         "message": {
-                            "content": jsonlib.dumps(
-                                {
-                                    "answer": "It is a resume for a software developer.",
-                                    "cited_source_ids": [0],
-                                    "supported": True,
-                                }
+                            "content": (
+                                "<think>Use source zero.</think>\n```json\n"
+                                + jsonlib.dumps(
+                                    {
+                                        "answer": "It is a resume for a software developer.",
+                                        "cited_source_ids": [0],
+                                        "supported": True,
+                                    }
+                                )
+                                + "\n```"
                             )
                         }
                     }
@@ -119,6 +124,15 @@ def test_llama_cpp_provider_returns_grounded_answer(monkeypatch) -> None:  # typ
     assert generated.supported is True
     assert generated.cited_result_indexes == [0]
     assert "resume" in generated.text
+
+
+def test_llama_cpp_provider_replaces_only_the_port() -> None:
+    provider = LlamaCppGenerationProvider(
+        "http://host.docker.internal:8080", "qwen-local", 30
+    ).with_port(9090)
+    assert provider.base_url == "http://host.docker.internal:9090"
+    assert provider.model == "qwen-local"
+    assert provider.timeout_seconds == 30
 
 
 def test_llama_cpp_provider_rejects_bad_citations(monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -183,6 +197,7 @@ def test_groq_provider_uses_bearer_key(monkeypatch) -> None:  # type: ignore[no-
     def fake_post(url, json, timeout, headers):  # type: ignore[no-untyped-def]
         assert url == "https://api.groq.com/openai/v1/chat/completions"
         assert headers == {"Authorization": "Bearer test-groq-key"}
+        assert json["response_format"]["type"] == "json_schema"
         return httpx.Response(
             200,
             json={
@@ -237,6 +252,67 @@ def test_ask_uses_selected_groq_provider(
     assert response.status_code == 200
     assert response.json()["answer"] == "Groq selected the cited passage."
     assert response.json()["citations"][0]["document_name"] == "resume.txt"
+
+
+def test_ask_uses_selected_local_port(
+    client: TestClient, auth_headers: dict[str, str], db: Session, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    from app.main import app
+
+    owner = db.query(User).filter_by(email="owner@example.com").one()
+    add_ready_document(db, owner, "resume.txt", ["A cited passage about software development."])
+
+    def fake_post(url, json, timeout, headers):  # type: ignore[no-untyped-def]
+        assert url == "http://local-server:9090/v1/chat/completions"
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": jsonlib.dumps(
+                                {
+                                    "answer": "The document discusses software development.",
+                                    "cited_source_ids": [0],
+                                    "supported": True,
+                                }
+                            )
+                        }
+                    }
+                ]
+            },
+            request=httpx.Request("POST", url),
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    app.dependency_overrides[get_generation_provider] = lambda: LlamaCppGenerationProvider(
+        "http://local-server:8080", "qwen-local"
+    )
+    try:
+        response = client.post(
+            "/ask",
+            headers=auth_headers,
+            json={
+                "question": "What is the document about?",
+                "provider": "local",
+                "local_server_port": 9090,
+            },
+        )
+    finally:
+        app.dependency_overrides[get_generation_provider] = ExtractiveGenerationProvider
+    assert response.status_code == 200
+    assert response.json()["citations"][0]["document_name"] == "resume.txt"
+
+
+def test_local_port_must_be_in_range(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    response = client.post(
+        "/ask",
+        headers=auth_headers,
+        json={"question": "What is this?", "local_server_port": 70000},
+    )
+    assert response.status_code == 422
 
 
 class FailingProvider(GenerationProvider):

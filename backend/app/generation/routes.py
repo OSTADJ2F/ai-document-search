@@ -10,6 +10,7 @@ from app.database.session import get_db
 from app.generation.providers import (
     GenerationProvider,
     GenerationProviderNotConfiguredError,
+    LlamaCppGenerationProvider,
     get_generation_provider,
     get_groq_generation_provider,
 )
@@ -46,6 +47,10 @@ def ask_documents(
         limit=payload.retrieval_limit,
     )
     generator = local_generator if payload.provider == "local" else groq_generator
+    if payload.local_server_port is not None and isinstance(
+        generator, LlamaCppGenerationProvider
+    ):
+        generator = generator.with_port(payload.local_server_port)
     started = time.perf_counter()
     try:
         generated = generator.generate(payload.question, results)
