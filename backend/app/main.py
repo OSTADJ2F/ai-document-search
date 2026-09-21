@@ -27,7 +27,7 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if settings.app_env != "production":
+    if settings.app_env == "development":
         if engine.dialect.name == "postgresql":
             with engine.begin() as connection:
                 connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))

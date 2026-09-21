@@ -1,9 +1,12 @@
+import os
 from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+
+os.environ["APP_ENV"] = "test"
 
 from app.database.models import User  # noqa: F401
 from app.database.session import Base, get_db
