@@ -41,6 +41,8 @@ services:
         sync: false
       - key: CORS_ORIGINS
         sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
 
   - type: worker
     name: ai-document-search-worker

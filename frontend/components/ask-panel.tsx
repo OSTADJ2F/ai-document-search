@@ -19,7 +19,7 @@ type Answer = {
   supported: boolean;
 };
 
-type Provider = "local" | "groq";
+type Provider = "local" | "groq" | "deepseek";
 
 const PROVIDER_STORAGE_KEY = "locus-ai-provider";
 const LOCAL_PORT_STORAGE_KEY = "locus-local-server-port";
@@ -34,7 +34,7 @@ export function AskPanel() {
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       const saved = window.localStorage.getItem(PROVIDER_STORAGE_KEY);
-      if (saved === "local" || saved === "groq") {
+      if (saved === "local" || saved === "groq" || saved === "deepseek") {
         setProvider(saved);
       }
       const savedPort = window.localStorage.getItem(LOCAL_PORT_STORAGE_KEY);
@@ -89,7 +89,7 @@ export function AskPanel() {
       <form className="mt-7" onSubmit={ask}>
         <fieldset>
           <legend className="text-xs font-bold uppercase tracking-[0.16em] text-white/60">AI provider</legend>
-          <div className="mt-3 grid items-start gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className={`border p-4 ${provider === "local" ? "border-orange-300 bg-white/10" : "border-white/20"}`}>
               <label className="cursor-pointer">
                 <input className="sr-only" type="radio" name="provider" value="local" checked={provider === "local"} onChange={() => chooseProvider("local")} />
@@ -107,6 +107,11 @@ export function AskPanel() {
               <input className="sr-only" type="radio" name="provider" value="groq" checked={provider === "groq"} onChange={() => chooseProvider("groq")} />
               <span className="block font-bold">Groq</span>
               <span className="mt-1 block text-sm text-white/60">Sends retrieved passages to Groq. Requires GROQ_API_KEY.</span>
+            </label>
+            <label className={`cursor-pointer border p-4 ${provider === "deepseek" ? "border-orange-300 bg-white/10" : "border-white/20"}`}>
+              <input className="sr-only" type="radio" name="provider" value="deepseek" checked={provider === "deepseek"} onChange={() => chooseProvider("deepseek")} />
+              <span className="block font-bold">DeepSeek</span>
+              <span className="mt-1 block text-sm text-white/60">Sends retrieved passages to DeepSeek. Requires DEEPSEEK_API_KEY.</span>
             </label>
           </div>
         </fieldset>

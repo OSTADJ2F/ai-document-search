@@ -124,6 +124,8 @@ class OpenAICompatibleGenerationProvider(GenerationProvider):
         api_key: str | None = None,
         provider_label: str = "AI provider",
         use_json_schema: bool = True,
+        use_json_object: bool = False,
+        chat_completions_path: str | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -131,6 +133,8 @@ class OpenAICompatibleGenerationProvider(GenerationProvider):
         self.api_key = api_key
         self.provider_label = provider_label
         self.use_json_schema = use_json_schema
+        self.use_json_object = use_json_object
+        self.chat_completions_path = chat_completions_path
 
     def generate(self, question: str, sources: list[SearchResult]) -> GeneratedAnswer:
         if not sources:
@@ -140,11 +144,12 @@ class OpenAICompatibleGenerationProvider(GenerationProvider):
                 supported=False,
             )
 
-        endpoint = (
-            f"{self.base_url}/chat/completions"
+        path = self.chat_completions_path or (
+            "/chat/completions"
             if self.base_url.endswith("/v1")
-            else f"{self.base_url}/v1/chat/completions"
+            else "/v1/chat/completions"
         )
+        endpoint = f"{self.base_url}{path}"
         request_body = {
             "model": self.model,
             "messages": [
@@ -189,6 +194,8 @@ class OpenAICompatibleGenerationProvider(GenerationProvider):
                     },
                 },
             }
+        elif self.use_json_object:
+            request_body["response_format"] = {"type": "json_object"}
         response = httpx.post(
             endpoint,
             headers={"Authorization": f"Bearer {self.api_key}"} if self.api_key else None,
@@ -271,6 +278,35 @@ class GroqGenerationProvider(OpenAICompatibleGenerationProvider):
         return super().generate(question, sources)
 
 
+class DeepSeekGenerationProvider(OpenAICompatibleGenerationProvider):
+    """Grounded cloud generation through DeepSeek's OpenAI-compatible API."""
+
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        timeout_seconds: float = 120,
+        api_key: str | None = None,
+    ) -> None:
+        super().__init__(
+            base_url,
+            model,
+            timeout_seconds,
+            api_key=api_key,
+            provider_label="DeepSeek",
+            use_json_schema=False,
+            use_json_object=True,
+            chat_completions_path="/chat/completions",
+        )
+
+    def generate(self, question: str, sources: list[SearchResult]) -> GeneratedAnswer:
+        if not self.api_key:
+            raise GenerationProviderNotConfiguredError(
+                "DeepSeek is not configured. Add DEEPSEEK_API_KEY to the backend environment."
+            )
+        return super().generate(question, sources)
+
+
 def build_grounded_prompt(question: str, sources: list[SearchResult]) -> str:
     references = "\n\n".join(
         f'<source id="{index}">{source.content}</source>' for index, source in enumerate(sources)
@@ -307,4 +343,15 @@ def get_groq_generation_provider() -> GenerationProvider:
         timeout_seconds=settings.groq_timeout_seconds,
         api_key=settings.groq_api_key,
         provider_label="Groq",
+    )
+
+
+@lru_cache
+def get_deepseek_generation_provider() -> GenerationProvider:
+    settings = get_settings()
+    return DeepSeekGenerationProvider(
+        base_url=settings.deepseek_base_url,
+        model=settings.deepseek_model,
+        timeout_seconds=settings.deepseek_timeout_seconds,
+        api_key=settings.deepseek_api_key,
     )

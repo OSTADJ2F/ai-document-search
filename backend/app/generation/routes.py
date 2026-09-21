@@ -11,6 +11,7 @@ from app.generation.providers import (
     GenerationProvider,
     GenerationProviderNotConfiguredError,
     LlamaCppGenerationProvider,
+    get_deepseek_generation_provider,
     get_generation_provider,
     get_groq_generation_provider,
 )
@@ -25,6 +26,9 @@ Database = Annotated[Session, Depends(get_db)]
 Embeddings = Annotated[EmbeddingProvider, Depends(get_embedding_provider)]
 Generator = Annotated[GenerationProvider, Depends(get_generation_provider)]
 GroqGenerator = Annotated[GenerationProvider, Depends(get_groq_generation_provider)]
+DeepSeekGenerator = Annotated[
+    GenerationProvider, Depends(get_deepseek_generation_provider)
+]
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -35,6 +39,7 @@ def ask_documents(
     embeddings: Embeddings,
     local_generator: Generator,
     groq_generator: GroqGenerator,
+    deepseek_generator: DeepSeekGenerator,
 ) -> AskResponse:
     results = hybrid_search(
         db=db,
@@ -46,7 +51,12 @@ def ask_documents(
         uploaded_after=None,
         limit=payload.retrieval_limit,
     )
-    generator = local_generator if payload.provider == "local" else groq_generator
+    generators = {
+        "local": local_generator,
+        "groq": groq_generator,
+        "deepseek": deepseek_generator,
+    }
+    generator = generators[payload.provider]
     if payload.local_server_port is not None and isinstance(
         generator, LlamaCppGenerationProvider
     ):

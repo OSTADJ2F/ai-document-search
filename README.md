@@ -16,7 +16,7 @@ retrieval, and ask questions whose answers link back to exact source passages.
   and batched, replaceable embeddings
 - PostgreSQL full-text search plus pgvector cosine similarity, combined with a
   70/30 hybrid score and owner/date/type/document filters
-- A workspace provider setting for local llama.cpp or Groq, with inspectable
+- A workspace provider setting for local llama.cpp, Groq, or DeepSeek, with inspectable
   citations, structured output validation, and an honest unsupported response
 - Prompt-injection boundaries, distributed rate limiting, audit logs, structured
   request logs, Prometheus metrics, and owner-scoped search caching
@@ -112,6 +112,8 @@ values include:
 | `LLAMA_CPP_MODEL` | Model alias exposed by `llama-server` | `qwen-local` |
 | `GROQ_API_KEY` | Server-side Groq credential; required only when Groq is selected | Unset |
 | `GROQ_MODEL` | Groq model used for grounded answers | `openai/gpt-oss-20b` |
+| `DEEPSEEK_API_KEY` | Server-side DeepSeek credential; required only when DeepSeek is selected | Unset |
+| `DEEPSEEK_MODEL` | DeepSeek model used for grounded answers | `deepseek-flash` |
 | `RATE_LIMIT_PER_MINUTE` | Per-client, per-route limit | `60` |
 | `SEARCH_CACHE_TTL_SECONDS` | Owner-scoped Redis cache TTL | `60` |
 
@@ -131,11 +133,11 @@ curl -X POST http://localhost:8000/ask \
   -d '{"question":"What is the primary operational risk?","provider":"local","local_server_port":8080}'
 ```
 
-The `provider` field accepts only `local` or `groq`. Selecting Groq sends the
-retrieved source passages needed for the answer to Groq; the API key remains in
-the backend environment and is never returned to the browser. When local is
-selected, `local_server_port` can override the port from `LLAMA_CPP_URL`; the
-configured host and protocol remain fixed.
+The `provider` field accepts `local`, `groq`, or `deepseek`. Selecting a cloud
+provider sends the retrieved source passages needed for the answer to that
+provider; API keys remain in the backend environment and are never returned to
+the browser. When local is selected, `local_server_port` can override the port
+from `LLAMA_CPP_BASE_URL`; the configured host and protocol remain fixed.
 
 Run `python backend/scripts/seed_demo.py` against a running stack to register a
 demo account and upload the included risk report.

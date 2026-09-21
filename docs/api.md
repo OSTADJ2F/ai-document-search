@@ -43,11 +43,12 @@ Ask body:
 }
 ```
 
-`provider` accepts `local` or `groq` and defaults to `local`. Groq requires a
-server-side `GROQ_API_KEY`; the credential is never accepted from the client.
+`provider` accepts `local`, `groq`, or `deepseek` and defaults to `local`. Groq
+requires a server-side `GROQ_API_KEY`; DeepSeek requires a server-side
+`DEEPSEEK_API_KEY`. Credentials are never accepted from the client.
 `local_server_port` is optional, accepts ports from 1 through 65535, and applies
 only to the local provider. It replaces only the port of the configured
-`LLAMA_CPP_URL` rather than accepting a client-provided server address.
+`LLAMA_CPP_BASE_URL` rather than accepting a client-provided server address.
 
 Ask response:
 

@@ -8,7 +8,7 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=2, max_length=2000)
     document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
     retrieval_limit: int = Field(default=8, ge=1, le=20)
-    provider: Literal["local", "groq"] = "local"
+    provider: Literal["local", "groq", "deepseek"] = "local"
     local_server_port: int | None = Field(default=None, ge=1, le=65535)
 
     @field_validator("question")
