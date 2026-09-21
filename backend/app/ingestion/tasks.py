@@ -76,10 +76,10 @@ def ingest_document(
         logger.info("ingestion.complete", document_id=str(document.id), chunks=len(chunks))
     except Exception as exc:
         db.rollback()
-        document = db.get(Document, document.id)
-        if document:
-            document.status = DocumentStatus.failed
-            document.error_message = f"Processing failed: {type(exc).__name__}"
+        failed_document = db.get(Document, document.id)
+        if failed_document is not None:
+            failed_document.status = DocumentStatus.failed
+            failed_document.error_message = f"Processing failed: {type(exc).__name__}"
             db.commit()
         INGESTION_JOBS.labels("failed").inc()
         logger.exception("ingestion.failed", document_id=str(document.id))

@@ -214,10 +214,11 @@ class OpenAICompatibleGenerationProvider(GenerationProvider):
         answer = parsed.get("answer")
         supported = parsed.get("supported")
         cited = parsed.get("cited_source_ids")
-        valid_types = (
-            isinstance(answer, str) and isinstance(supported, bool) and isinstance(cited, list)
-        )
-        if not valid_types:
+        if (
+            not isinstance(answer, str)
+            or not isinstance(supported, bool)
+            or not isinstance(cited, list)
+        ):
             raise ValueError(f"{self.provider_label} returned an invalid answer payload")
         if not supported:
             return GeneratedAnswer(text=answer.strip(), cited_result_indexes=[], supported=False)

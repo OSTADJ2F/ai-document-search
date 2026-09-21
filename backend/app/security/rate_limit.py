@@ -49,7 +49,9 @@ def enforce_rate_limit(request: Request) -> None:
     try:
         redis_key = f"rate:{key}:{minute}"
         with _redis().pipeline() as pipeline:
-            count, _ = pipeline.incr(redis_key).expire(redis_key, 61).execute()
+            pipeline.incr(redis_key)
+            pipeline.expire(redis_key, 61)
+            count, _ = pipeline.execute()
         allowed = int(count) <= settings.rate_limit_per_minute
     except Exception:
         allowed = local_limiter.allow(key, settings.rate_limit_per_minute)

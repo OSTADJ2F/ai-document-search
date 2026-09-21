@@ -32,7 +32,11 @@ class RedisSearchCache(SearchCache):
     def get(self, key: str) -> str | None:
         try:
             value = self.client.get(key)
-            return value.decode() if isinstance(value, bytes) else value
+            if isinstance(value, bytes):
+                return value.decode()
+            if isinstance(value, str):
+                return value
+            return None
         except Exception:
             return None
 
