@@ -1,85 +1,171 @@
-# Locus — AI Document Search
+# Locus — Document Intelligence
 
-Locus is a private document-intelligence application: upload PDF, Markdown, or
-text files, process them asynchronously, search with semantic and keyword
-retrieval, and ask questions whose answers link back to exact source passages.
+### Turn documents into answers you can trace.
 
-![Locus landing page](docs/screenshots/landing.png)
+[![CI](https://github.com/OSTADJ2F/ai-document-search/actions/workflows/ci.yml/badge.svg)](https://github.com/OSTADJ2F/ai-document-search/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Highlights
+Locus is a full-stack retrieval-augmented generation (RAG) application that turns
+a document library into a searchable knowledge workspace. Upload a report, ask a
+question in plain language, and inspect the source passages behind the answer.
+Choose local inference with llama.cpp or cloud generation through Groq and DeepSeek.
 
-- Account registration, Argon2 password hashing, JWT authentication, and strict
-  per-user authorization
-- Content-aware uploads, size limits, duplicate detection, local/S3-compatible
-  storage, processing status, and safe deletion
-- Redis/RQ ingestion with retries, PDF page preservation, overlapping chunks,
-  and batched, replaceable embeddings
-- PostgreSQL full-text search plus pgvector cosine similarity, combined with a
-  70/30 hybrid score and owner/date/type/document filters
-- A workspace provider setting for local llama.cpp, Groq, or DeepSeek, with inspectable
-  citations, structured output validation, and an honest unsupported response
-- Prompt-injection boundaries, distributed rate limiting, audit logs, structured
-  request logs, Prometheus metrics, and owner-scoped search caching
-- Pytest quality evaluation, Vitest unit tests, Playwright smoke tests, GitHub
-  Actions CI, production containers, Alembic migrations, and Render Blueprint
+Built with **Next.js, TypeScript, FastAPI, PostgreSQL/pgvector, Redis, and Docker**,
+Locus brings together AI integration, asynchronous processing, access control,
+and automated quality evaluation in one application.
+
+[Architecture](docs/architecture.md) · [API reference](docs/api.md) ·
+[Evaluation](docs/evaluation.md) · [Deployment guide](docs/deployment.md)
+
+![Locus landing page — document intelligence workspace](docs/screenshots/landing.png)
+
+## From document library to evidence-backed answers
+
+Finding a passage is only part of the problem. Locus connects document processing,
+retrieval, and answer generation so users can move from a question to its evidence
+without switching tools.
+
+1. **Upload** PDF, Markdown, or plain-text documents into an authenticated workspace.
+2. **Track processing** as background workers extract text, create overlapping
+   chunks, and store searchable vectors with source metadata.
+3. **Search or ask** using hybrid vector and keyword retrieval, with document,
+   file-type, and date filters available through the search API.
+4. **Inspect the evidence** through expandable citations containing document names,
+   source snippets, and page or section references when available.
+
+The answer pipeline checks response structure and citation indexes before returning
+results, and supports an explicit insufficient-evidence response.
+
+## Engineering highlights
+
+| Capability | Implementation | Why it matters |
+| --- | --- | --- |
+| Hybrid retrieval | pgvector cosine similarity combined with PostgreSQL full-text ranking at a 70/30 weighting | Combines vector matching with exact-term relevance in a single data store |
+| Asynchronous ingestion | Redis/RQ workers, bounded retries, processing states, and batched embeddings | Moves extraction and indexing outside the upload request |
+| Interchangeable AI providers | Local llama.cpp, Groq, and DeepSeek adapters behind a shared generation interface | Supports local and cloud inference through the same question-answering workflow |
+| Traceable answers | Retrieved source blocks, structured response validation, and citation mapping | Lets users inspect the passages used to produce an answer |
+| User isolation | JWT authentication, Argon2 password hashing, owner-scoped queries and cache keys | Restricts document access and retrieval to the authenticated account |
+| Storage flexibility | Local and S3-compatible storage behind a shared interface | Allows API and worker services to share uploaded files across containers |
+| Operational visibility | Structured request logs, audit events, Prometheus metrics, and readiness checks | Makes request behavior, ingestion failures, and service health observable |
+| Automated quality checks | GitHub Actions, API tests, retrieval evaluation, frontend tests, and browser smoke tests | Covers application behavior alongside retrieval and citation regressions |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Browser[Next.js web] -->|JWT / REST| API[FastAPI API]
-  API --> PG[(PostgreSQL + pgvector)]
-  API --> Redis[(Redis)]
-  API --> Store[(Local or S3 storage)]
-  Redis --> Worker[RQ worker]
-  Worker --> Store
-  Worker --> PG
-  API -->|retrieved evidence| Generator[Generation provider]
+    Web[Next.js workspace] -->|Authenticated REST API| API[FastAPI]
+    API -->|Upload source| Store[(Local / S3 storage)]
+    API -->|Enqueue ingestion| Queue[Redis / RQ]
+    Queue --> Worker[Background worker]
+    Store -->|Read source| Worker
+    Worker -->|Extract, chunk, embed| DB[(PostgreSQL + pgvector)]
+    API <-->|Owner-scoped hybrid retrieval| DB
+    API <-->|Question, passages, answer| AI[llama.cpp / Groq / DeepSeek]
+    API -->|Answer and citations| Web
 ```
 
-The provider boundaries keep embeddings, generation, and object storage
-replaceable through configuration. See [architecture](docs/architecture.md),
-[API reference](docs/api.md), and the [portfolio case study](docs/portfolio.md).
+Document ingestion and question answering have separate execution paths. Workers
+prepare searchable content asynchronously; the API retrieves passages belonging to
+the current user and passes them to the selected generation provider. Storage,
+embedding, and generation interfaces keep those concerns independently replaceable.
 
-## Quick start with Docker
+### Technology stack
 
-Prerequisites: Docker Desktop with Compose v2, plus a llama.cpp server with a
-chat model loaded. For example:
+| Layer | Technologies |
+| --- | --- |
+| Frontend | Next.js, React, TypeScript, Tailwind CSS |
+| API and data modeling | Python, FastAPI, Pydantic, SQLAlchemy, Alembic |
+| Search and persistence | PostgreSQL, pgvector, PostgreSQL full-text search |
+| Background processing | Redis, RQ |
+| AI generation | llama.cpp, Groq API, DeepSeek API |
+| Storage | Local filesystem, S3-compatible object storage |
+| Quality and delivery | Pytest, Ruff, Vitest, ESLint, Playwright, GitHub Actions, Docker Compose |
+
+## Try the workflow
+
+After starting the application:
+
+1. Create an account and upload the included [demo risk report](docs/demo-risk-report.md).
+2. Wait for the document to reach **Ready**.
+3. Ask: **“What is the primary operational risk?”**
+4. Expand a citation and compare the answer with its source passage.
+5. Ask a question the report does not answer to explore insufficient-evidence behavior.
+
+The same workflow supports a local model or either cloud provider. The provider
+selection and local-server port are saved in the browser.
+
+## Quick start
+
+**Requirements:** Docker with Compose v2. For AI-generated answers, use a running
+llama.cpp server or configure a Groq or DeepSeek API key.
+
+```bash
+git clone https://github.com/OSTADJ2F/ai-document-search.git
+cd ai-document-search
+cp .env.example .env
+```
+
+Set a unique `SECRET_KEY` in `.env`, then choose a generation option:
+
+| Option | Setup |
+| --- | --- |
+| Local model | Keep `GENERATION_PROVIDER=llama_cpp`, start `llama-server`, and select **Local server** in the workspace |
+| Groq | Set `GROQ_API_KEY` and select **Groq** in the workspace |
+| DeepSeek | Set `DEEPSEEK_API_KEY` and select **DeepSeek** in the workspace |
+| No-model demo | Set `GENERATION_PROVIDER=extractive` and select **Local server** for deterministic passage-based answers |
+
+Example local model startup:
 
 ```bash
 llama-server --model /path/to/model.gguf --alias qwen-local --host 127.0.0.1 --port 8080 --ctx-size 8192 --reasoning off
 ```
 
-Set `GENERATION_PROVIDER=extractive` to use the simpler no-model fallback.
+Start the application:
 
 ```bash
-cp .env.example .env
-# Replace SECRET_KEY with a long random value.
 docker compose up --build
 ```
 
-Open <http://localhost:3000>. API documentation is at
-<http://localhost:8000/docs>, health at <http://localhost:8000/health>, and
-readiness at <http://localhost:8000/ready>, and Prometheus metrics at
-<http://localhost:8000/metrics>.
+Open the [application](http://localhost:3000) or explore the
+[interactive API documentation](http://localhost:8000/docs). Compose starts the
+frontend, API, worker, PostgreSQL, and Redis; the API applies database migrations
+at startup.
 
-The Compose stack starts Next.js, FastAPI, a Redis/RQ worker, PostgreSQL with
-pgvector, and Redis. The API applies Alembic migrations before serving.
+### Configuration
 
-## Local development without Docker
+Configuration lives in environment variables. See [.env.example](.env.example)
+for the complete template; `.env` is excluded from Git.
 
-Run PostgreSQL/pgvector and Redis, then:
+| Setting | Purpose |
+| --- | --- |
+| `SECRET_KEY` | JWT signing secret; production requires a unique value of at least 32 characters |
+| `LLAMA_CPP_BASE_URL` / `LLAMA_CPP_MODEL` | Local model endpoint and alias; the Compose example uses `host.docker.internal:8080` |
+| `GROQ_API_KEY` / `GROQ_MODEL` | Groq credentials and model selection |
+| `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` | DeepSeek credentials and model selection |
+| `STORAGE_BACKEND` / `S3_*` | Local or S3-compatible upload storage |
+| `MAX_UPLOAD_SIZE_MB` | Upload size limit; defaults to 20 MB |
+| `RATE_LIMIT_PER_MINUTE` | Request limit; defaults to 60 |
+| `SEARCH_CACHE_TTL_SECONDS` | Search cache lifetime; defaults to 60 seconds |
+
+Cloud providers receive the question and retrieved passages needed for generation.
+Their API keys stay on the backend. The local port setting changes only the port
+of the configured llama.cpp endpoint.
+
+<details>
+<summary>Run the services without Docker</summary>
+
+With PostgreSQL/pgvector and Redis available, configure `.env` for your local
+services and a writable upload directory, then start the backend:
 
 ```bash
-cp .env.example .env
 cd backend
 python -m venv .venv
-.venv/Scripts/pip install -e ".[dev]"  # Windows
-alembic upgrade head
-uvicorn app.main:app --reload
+.venv/Scripts/pip install -e ".[dev]"
+.venv/Scripts/alembic upgrade head
+.venv/Scripts/uvicorn app.main:app --reload
 ```
 
-In two additional terminals:
+Start the worker and frontend in separate terminals:
 
 ```bash
 cd backend
@@ -88,106 +174,53 @@ cd backend
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-On macOS/Linux, replace `.venv/Scripts/...` with `.venv/bin/...`.
+The Python commands above use Windows paths. On macOS/Linux, replace
+`.venv/Scripts/` with `.venv/bin/`.
 
-## Configuration
+</details>
 
-All settings are environment variables; `.env` is ignored by Git. Important
-values include:
+## Quality and evaluation
 
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `DATABASE_URL` | SQLAlchemy PostgreSQL/psycopg URL | Compose PostgreSQL |
-| `REDIS_URL` | Jobs, rate limits, and search cache | Compose Redis |
-| `SECRET_KEY` | JWT signing secret; 32+ characters in production | No safe production default |
-| `STORAGE_BACKEND` | `local` or `s3` | `local` |
-| `MAX_UPLOAD_SIZE_MB` | Upload limit | `20` |
-| `EMBEDDING_PROVIDER` | Embedding adapter | `local` |
-| `GENERATION_PROVIDER` | Grounded answer adapter (`llama_cpp` or `extractive`) | `llama_cpp` |
-| `LLAMA_CPP_BASE_URL` | llama.cpp API URL (Compose reaches the host through `host.docker.internal`) | `http://host.docker.internal:8080` |
-| `LLAMA_CPP_MODEL` | Model alias exposed by `llama-server` | `qwen-local` |
-| `GROQ_API_KEY` | Server-side Groq credential; required only when Groq is selected | Unset |
-| `GROQ_MODEL` | Groq model used for grounded answers | `openai/gpt-oss-20b` |
-| `DEEPSEEK_API_KEY` | Server-side DeepSeek credential; required only when DeepSeek is selected | Unset |
-| `DEEPSEEK_MODEL` | DeepSeek model used for grounded answers | `deepseek-flash` |
-| `RATE_LIMIT_PER_MINUTE` | Per-client, per-route limit | `60` |
-| `SEARCH_CACHE_TTL_SECONDS` | Owner-scoped Redis cache TTL | `60` |
+[GitHub Actions](https://github.com/OSTADJ2F/ai-document-search/actions/workflows/ci.yml)
+runs backend linting, formatting, and Pytest with coverage, plus frontend linting,
+unit tests, a production build, and Playwright browser smoke tests on pushes to
+`main` and pull requests.
 
-For `STORAGE_BACKEND=s3`, configure the `S3_*` variables shown in
-`.env.example`. The endpoint may be AWS S3 or another S3-compatible provider.
+The repository also includes a versioned retrieval evaluation dataset covering
+factual questions, multiple passages, unsupported questions, and an instruction
+override attempt. Regression gates check retrieval recall and precision,
+extractive answer groundedness, citation correctness, and local case latency.
+These gates evaluate the small deterministic baseline, not the accuracy or speed
+of every connected language model. See the [evaluation methodology](docs/evaluation.md)
+and [performance harness](docs/performance.md) for scope and reproduction details.
 
-## API example
+## Deployment and observability
 
-```bash
-curl -X POST http://localhost:8000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@example.com","password":"correct horse battery staple"}'
+Dockerfiles package the frontend and backend, while [render.yaml](render.yaml)
+defines a cloud deployment blueprint for the web app, API, worker, PostgreSQL,
+and Redis-compatible service. S3-compatible storage provides shared uploads for
+separate API and worker instances. Provisioning requires your cloud and storage
+credentials; setup is documented in the [deployment guide](docs/deployment.md).
 
-curl -X POST http://localhost:8000/ask \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"question":"What is the primary operational risk?","provider":"local","local_server_port":8080}'
-```
+The API exposes `/health`, `/ready`, and `/metrics` for dependency health,
+readiness, and Prometheus instrumentation.
 
-The `provider` field accepts `local`, `groq`, or `deepseek`. Selecting a cloud
-provider sends the retrieved source passages needed for the answer to that
-provider; API keys remain in the backend environment and are never returned to
-the browser. When local is selected, `local_server_port` can override the port
-from `LLAMA_CPP_BASE_URL`; the configured host and protocol remain fixed.
+## Current scope and next steps
 
-Run `python backend/scripts/seed_demo.py` against a running stack to register a
-demo account and upload the included risk report.
+The included embedding adapter uses deterministic feature hashing, making the
+demo reproducible without an embedding API. Neural embeddings and reranking are
+the next retrieval improvements. PDF extraction currently supports text-based
+files; OCR and DOCX support are planned.
 
-## Testing and quality
-
-```bash
-cd backend
-ruff check .
-ruff format --check .
-pytest --cov=app --cov-report=term-missing
-
-cd ../frontend
-npm run lint
-npm run test
-npm run build
-npm run test:e2e
-```
-
-The fixed evaluation set currently gates retrieval recall at 100%, precision at
-50% or better, citation correctness and extractive groundedness at 100%, local
-case latency below one second, and answer-behavior failures at zero. These are
-small regression gates, not a broad benchmark claim. See
-[evaluation methodology](docs/evaluation.md) and
-[load testing](docs/performance.md).
-
-## Deployment
-
-`render.yaml` is a reproducible cloud target for the frontend, API, worker,
-PostgreSQL, and Redis-compatible service. Cloud uploads use shared S3-compatible
-storage. Follow [deployment instructions](docs/deployment.md); no deployment URL
-is claimed until a Blueprint instance is provisioned with user-owned cloud and
-object-storage credentials.
-
-## Known limitations
-
-- The included local hash embeddings optimize for a private, API-key-free demo;
-  retrieval quality is lower than a modern neural embedding model.
-- Scanned PDFs require an OCR adapter; the initial extractor handles text PDFs.
-- DOCX support is intentionally deferred until the core PDF/TXT/Markdown path.
-- Cache invalidation is TTL-based, so newly ingested content can take up to the
-  configured cache TTL to appear for an identical query.
-
-## Roadmap
-
-- OCR and DOCX extraction
-- Managed embedding/generation adapters with streaming responses
-- Team workspaces and configurable retention policies
-- Reranking, answer feedback, and a larger domain evaluation corpus
+Other planned improvements include streaming answers, answer feedback, team
+workspaces, and a larger evaluation corpus. Search cache invalidation currently
+uses a configurable TTL, so repeated cached searches may briefly lag newly
+indexed documents.
 
 ## License
 
-[MIT](LICENSE)
+Released under the [MIT License](LICENSE).
