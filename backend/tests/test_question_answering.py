@@ -396,9 +396,7 @@ def test_ask_uses_selected_local_port(
     assert response.json()["citations"][0]["document_name"] == "resume.txt"
 
 
-def test_local_port_must_be_in_range(
-    client: TestClient, auth_headers: dict[str, str]
-) -> None:
+def test_local_port_must_be_in_range(client: TestClient, auth_headers: dict[str, str]) -> None:
     response = client.post(
         "/ask",
         headers=auth_headers,

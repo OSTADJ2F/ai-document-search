@@ -26,9 +26,7 @@ Database = Annotated[Session, Depends(get_db)]
 Embeddings = Annotated[EmbeddingProvider, Depends(get_embedding_provider)]
 Generator = Annotated[GenerationProvider, Depends(get_generation_provider)]
 GroqGenerator = Annotated[GenerationProvider, Depends(get_groq_generation_provider)]
-DeepSeekGenerator = Annotated[
-    GenerationProvider, Depends(get_deepseek_generation_provider)
-]
+DeepSeekGenerator = Annotated[GenerationProvider, Depends(get_deepseek_generation_provider)]
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -57,9 +55,7 @@ def ask_documents(
         "deepseek": deepseek_generator,
     }
     generator = generators[payload.provider]
-    if payload.local_server_port is not None and isinstance(
-        generator, LlamaCppGenerationProvider
-    ):
+    if payload.local_server_port is not None and isinstance(generator, LlamaCppGenerationProvider):
         generator = generator.with_port(payload.local_server_port)
     started = time.perf_counter()
     try:

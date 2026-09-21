@@ -145,9 +145,7 @@ class OpenAICompatibleGenerationProvider(GenerationProvider):
             )
 
         path = self.chat_completions_path or (
-            "/chat/completions"
-            if self.base_url.endswith("/v1")
-            else "/v1/chat/completions"
+            "/chat/completions" if self.base_url.endswith("/v1") else "/v1/chat/completions"
         )
         endpoint = f"{self.base_url}{path}"
         request_body = {
@@ -217,9 +215,7 @@ class OpenAICompatibleGenerationProvider(GenerationProvider):
         supported = parsed.get("supported")
         cited = parsed.get("cited_source_ids")
         valid_types = (
-            isinstance(answer, str)
-            and isinstance(supported, bool)
-            and isinstance(cited, list)
+            isinstance(answer, str) and isinstance(supported, bool) and isinstance(cited, list)
         )
         if not valid_types:
             raise ValueError(f"{self.provider_label} returned an invalid answer payload")
