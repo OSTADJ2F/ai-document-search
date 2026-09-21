@@ -49,18 +49,18 @@ instructions for verification on a Docker/cloud host.
 
 | Commit | Milestone |
 | --- | --- |
-| `28c6770` | Repository initialized and pushed |
-| `869c520` | FastAPI, Next.js, services, and CI foundation |
-| `c1942b0` | Authentication and protected routes |
-| `fd17313` | Document upload and ownership management |
-| `3e19e25` | Asynchronous extraction/chunking/embedding pipeline |
-| `c5d0821` | Hybrid semantic and keyword retrieval |
-| `5f2922a` | Grounded answers and inspectable citations |
-| `e657aca` | Retrieval and answer-quality evaluation |
-| `da42a43` | Security and isolation hardening |
-| `db23d61` | Metrics, caching, and load-test harness |
-| `89a213f` | Production migrations, deployment, docs, and screenshot |
-| `bbcf967` | Current GitHub Actions runtimes |
+| `9faeb31` | Repository initialized and pushed |
+| `b6f0c5d` | FastAPI, Next.js, services, and CI foundation |
+| `e8a4a62` | Authentication and protected routes |
+| `3146d94` | Document upload and ownership management |
+| `266eae0` | Asynchronous extraction/chunking/embedding pipeline |
+| `556f13f` | Hybrid semantic and keyword retrieval |
+| `a363023` | Grounded answers and inspectable citations |
+| `d8c89b9` | Retrieval and answer-quality evaluation |
+| `e92d388` | Security and isolation hardening |
+| `fda8eea` | Metrics, caching, and load-test harness |
+| `f88f45a` | Production migrations, deployment, docs, and screenshot |
+| `405576e` | Current GitHub Actions runtimes |
 
 ## Resume bullet
 
